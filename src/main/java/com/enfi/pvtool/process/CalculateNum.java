@@ -2,6 +2,9 @@ package com.enfi.pvtool.process;
 
 import com.alibaba.excel.EasyExcel;
 import com.enfi.pvtool.entity.Const;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -15,26 +18,29 @@ import java.util.List;
 /**
  * 计算累积放电值，累积充电值
  */
+@Component
 public class CalculateNum {
-
 
     float K1 = 1;
     float K2 = 1;
     float time = (float) 1 / (float) 60;
+
+    private final ConfigNum configNum;
+    
     List<Const> result = new LinkedList<>();
+
+    public CalculateNum(ConfigNum configNum) {
+        this.configNum = configNum;
+    }
 
     //读取目录
     //打开文件 定义电池量 累积放电量 累积充电量
     //循环读取每行
     //取有功目标值3，样机可发值9
     //执行逻辑T
-    public static void main(String[] args) {
-        CalculateNum calculateNum = new CalculateNum();
-        calculateNum.reloadFile();
-    }
 
-    private void reloadFile() {
-        String inputPath = "D:\\temp1";
+    public void reloadFile() {
+        String inputPath = "D:\\pv-tool";
         File file = new File(inputPath);      //获取其file对象
         File[] fs = file.listFiles();     //遍历path下的文件和目录，放在File数组中
         for (File f : fs) {                //遍历File[]数组
@@ -43,7 +49,7 @@ public class CalculateNum {
                 result.add(c);
             }
         }
-        String fileName =  inputPath + "\\test" + "aaa" + ".xlsx";
+        String fileName =  inputPath + "\\结果" + ".xlsx";
         EasyExcel.write(fileName, Const.class).sheet("模板").doWrite(result);
     }
 
@@ -68,15 +74,15 @@ public class CalculateNum {
                 }
 
 
-                if (temp >= 500) {
+                if (temp >= configNum.getPowerNum()) {
                     if (battery > 0) {
-                        t = battery / 500;
+                        t = battery / configNum.getPowerNum();
                         if (t > time) {
-                            battery -= K1 * time * 500;
-                            cumulativDischarge += K1 * time * 500;
+                            battery -= K1 * time * configNum.getPowerNum();
+                            cumulativDischarge += K1 * time * configNum.getPowerNum();
                         } else {
-                            battery -= K1 * t * 500;
-                            cumulativDischarge += K1 * t * 500;
+                            battery -= K1 * t * configNum.getPowerNum();
+                            cumulativDischarge += K1 * t * configNum.getPowerNum();
                         }
 
                     }
@@ -91,9 +97,9 @@ public class CalculateNum {
                             cumulativDischarge += K1 * t * temp;
                         }
                     }
-                } else if (temp >= -500) {
-                    if (battery < 1000) {
-                        t = Math.abs((1000 - battery) / temp);
+                } else if (temp >= -configNum.getPowerNum()) {
+                    if (battery < configNum.getBatteryCapacity()) {
+                        t = Math.abs((configNum.getBatteryCapacity() - battery) / temp);
                         if (t > time) {
                             battery += K2 * time * Math.abs(temp);
                             cumulativeCharge += K2 * time * Math.abs(temp);
@@ -103,14 +109,14 @@ public class CalculateNum {
                         }
                     }
                 } else {
-                    if (battery < 1000) {
-                        t = Math.abs((1000 - battery) / 500);
+                    if (battery < configNum.getBatteryCapacity()) {
+                        t = Math.abs((configNum.getBatteryCapacity() - battery) / configNum.getPowerNum());
                         if (t > time) {
-                            battery += K2 * time * 500;
-                            cumulativeCharge += K2 * time * 500;
+                            battery += K2 * time * configNum.getPowerNum();
+                            cumulativeCharge += K2 * time * configNum.getPowerNum();
                         } else {
-                            battery += K2 * t * 500;
-                            cumulativeCharge += K2 * t * 500;
+                            battery += K2 * t * configNum.getPowerNum();
+                            cumulativeCharge += K2 * t * configNum.getPowerNum();
                         }
                     }
                 }
